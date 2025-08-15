@@ -113,19 +113,14 @@ function App() {
             element={!user ? <Auth isSignUp /> : <Navigate to="/dashboard" />} 
           />
           <Route 
-            path="/dashboard" 
+            path="/dashboard/*" 
             element={
               user ? (
-                (() => {
-                  console.log('Dashboard routing - User object:', user);
-                  console.log('Dashboard routing - User role:', user.role);
-                  console.log('Dashboard routing - Is admin?', user.role === 'admin');
-                  return user.role === 'admin' ? (
-                    <AdminDashboard user={user} />
-                  ) : (
-                    <UserDashboard user={user} />
-                  );
-                })()
+                user.role === 'admin' ? (
+                  <AdminDashboard user={user} />
+                ) : (
+                  <UserDashboard user={user} />
+                )
               ) : (
                 <Navigate to="/login" />
               )

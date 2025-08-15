@@ -135,13 +135,21 @@ router.post('/dares', authenticateToken, async (req, res) => {
       entry_fee,
       category_id,
       start_time,
-      end_time
+      end_time,
+      required_media_type = 'image' // Default to 'image' if not provided
     } = req.body;
     
     // Validation
     if (!title || !description || !entry_fee || !start_time || !end_time) {
       return res.status(400).json({ 
         error: 'Title, description, entry fee, start time, and end time are required' 
+      });
+    }
+    
+    // Validate media type
+    if (!['image', 'video'].includes(required_media_type)) {
+      return res.status(400).json({
+        error: 'Invalid media type. Must be either "image" or "video"'
       });
     }
     
@@ -157,14 +165,41 @@ router.post('/dares', authenticateToken, async (req, res) => {
       });
     }
     
+    console.log('Attempting to insert dare with values:', {
+      title,
+      description,
+      created_by_user_id: req.user.id,
+      entry_fee,
+      category_id,
+      start_time: new Date(start_time).toISOString(),
+      end_time: new Date(end_time).toISOString(),
+      required_media_type
+    });
+
     const result = await query(`
       INSERT INTO dares (
-        title, description, created_by_user_id, entry_fee, 
-        category_id, start_time, end_time
+        title, 
+        description, 
+        created_by_user_id, 
+        entry_fee, 
+        category_id, 
+        start_time, 
+        end_time, 
+        required_media_type,
+        status
       ) 
-      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'open')
       RETURNING *
-    `, [title, description, req.user.id, entry_fee, category_id, start_time, end_time]);
+    `, [
+      title,
+      description,
+      req.user.id,
+      parseFloat(entry_fee),
+      category_id || null,
+      new Date(start_time).toISOString(),
+      new Date(end_time).toISOString(),
+      required_media_type
+    ]);
     
     res.status(201).json({
       success: true,
@@ -173,7 +208,40 @@ router.post('/dares', authenticateToken, async (req, res) => {
     });
   } catch (error) {
     console.error('Create dare error:', error);
-    res.status(500).json({ error: 'Failed to create dare' });
+    console.error('Request body:', JSON.stringify(req.body, null, 2));
+    console.error('User ID from token:', req.user?.id);
+    console.error('Error stack:', error.stack);
+    
+    // Log detailed error information
+    const errorDetails = {
+      message: error.message,
+      code: error.code,
+      detail: error.detail,
+      constraint: error.constraint,
+      table: error.table,
+      column: error.column,
+      dataType: error.dataType,
+      hint: error.hint,
+      schema: error.schema,
+      internalQuery: error.internalQuery,
+      parameters: error.parameters
+    };
+    
+    console.error('Error details:', JSON.stringify(errorDetails, null, 2));
+    
+    // Send detailed error in development, generic in production
+    const isDevelopment = process.env.NODE_ENV !== 'production';
+    res.status(500).json({ 
+      error: 'Failed to create dare',
+      details: isDevelopment ? errorDetails : 'An error occurred while creating the dare',
+      validation: {
+        title: !!req.body.title,
+        description: !!req.body.description,
+        entry_fee: !isNaN(parseFloat(req.body.entry_fee)),
+        start_time: !isNaN(new Date(req.body.start_time).getTime()),
+        end_time: !isNaN(new Date(req.body.end_time).getTime())
+      }
+    });
   }
 });
 
