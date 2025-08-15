@@ -1,0 +1,42 @@
+PS C:\Users\temes\Desktop\dareearn\Dare2Earn> psql -U postgres -d dare2earn -c "\d+ dares"
+Password for user postgres: 
+                                                               Table "public.dares"
+       Column        |           Type           | Collation | Nullable |      Default       | Storage  | Compression | Stats target | Description       
+---------------------+--------------------------+-----------+----------+--------------------+----------+-------------+--------------+-------------      
+ id                  | uuid                     |           | not null | uuid_generate_v4() | plain    |             |              |
+ title               | text                     |           | not null |                    | extended |             |              |
+ description         | text                     |           | not null |                    | extended |             |              |
+ created_by_user_id  | uuid                     |           | not null |                    | plain    |             |              |
+ entry_fee           | numeric(10,2)            |           | not null |                    | main     |             |              |
+ status              | text                     |           | not null | 'open'::text       | extended |             |              |
+ prize_pool          | numeric(10,2)            |           |          | 0.00               | main     |             |              |
+ category_id         | uuid                     |           |          |                    | plain    |             |              |
+ start_time          | timestamp with time zone |           | not null |                    | plain    |             |              |
+ end_time            | timestamp with time zone |           | not null |                    | plain    |             |              |
+ winner_user_id      | uuid                     |           |          |                    | plain    |             |              |
+ created_at          | timestamp with time zone |           |          | now()              | plain    |             |              |
+ updated_at          | timestamp with time zone |           |          | now()              | plain    |             |              |
+ required_media_type | text                     |           | not null | 'image'::text      | extended |             |              |
+Indexes:
+    "dares_pkey" PRIMARY KEY, btree (id)
+    "idx_dares_created_by" btree (created_by_user_id)
+    "idx_dares_status" btree (status)
+    "uq_dare_media_type" UNIQUE CONSTRAINT, btree (id, required_media_type) 
+Check constraints:
+    "dares_required_media_type_check" CHECK (required_media_type = ANY (ARRAY['image'::text, 'video'::text]))
+    "dares_status_check" CHECK (status = ANY (ARRAY['open'::text, 'closed'::text, 'completed'::text, 'cancelled'::text]))
+Foreign-key constraints:
+    "dares_category_id_fkey" FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL
+    "dares_created_by_user_id_fkey" FOREIGN KEY (created_by_user_id) REFERENCES users(id) ON DELETE CASCADE
+    "dares_winner_user_id_fkey" FOREIGN KEY (winner_user_id) REFERENCES users(id) ON DELETE SET NULL
+Referenced by:
+    TABLE "dare_participants" CONSTRAINT "dare_participants_dare_id_fkey" FOREIGN KEY (dare_id) REFERENCES dares(id) ON DELETE CASCADE
+    TABLE "dare_participants" CONSTRAINT "fk_dare_media_type" FOREIGN KEY (dare_id, media_type) REFERENCES dares(id, required_media_type) DEFERRABLE INITIALLY DEFERRED
+Triggers:
+    update_dares_modtime BEFORE UPDATE ON dares FOR EACH ROW EXECUTE FUNCTION update_modified_column()
+Access method: heap
+
+
+PS C:\Users\temes\Desktop\dareearn\Dare2Earn> 
+PS C:\Users\temes\Desktop\dareearn\Dare2Earn> 
+PS C:\Users\temes\Desktop\dareearn\Dare2Earn> 
